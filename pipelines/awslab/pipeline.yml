@@ -1,60 +1,103 @@
 resources:
 
-- name: pcf-labs
+- name: cf-labs
   type: git
   source:
     uri: https://github.com/opsforge/cf-labs.git
     branch: master
-    
+
 - name: terraform-state
   type: s3
   source:
     endpoint: http://minio:9000
     bucket: terraform
     regexp: (.*).tfstate
+    # Don't change following unless adjusted keys in minio deployment too
     access_key_id: AKIAIOSFODNN7EXAMPLE
     secret_access_key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 
+
+
+
 jobs:
-- name: list-folders
+# These jobs are trying to emulate the behaviour and steps of acutal jobs from pcf-pipelines
+- name: bootstrap-terraform-state
+  serial_groups: [terraform]
   plan:
-  - get: pcf-labs
-  - task: why
+  - aggregate:
+    - get: cf-labs
+    - get: terraform-state
+  - task: create-terraform-state
     config:
       platform: linux
-      inputs:
-      - name: pcf-labs
-      outputs:
-      - name: terraform
       image_resource:
         type: docker-image
         source:
           repository: alpine/git
-          # tag: 18.04
-      run:
-        path: sh
-        args:
-        - -c
-        - |
-          ls -la ./
-          echo "{mystate}" > ./terraform/terraform.tfstate
-  - task: hello
-    config:
-      platform: linux
-      inputs:
-      - name: terraform
-      image_resource:
-        type: docker-image
-        source:
-          repository: alpine/git
-          # tag: 18.04
-      run:
-        path: sh
-        args:
-        - -c
-        - |
-          ls -la ./
-  - put: terraform-state
-    params:
-      file: terraform/terraform.tfstate
-      acl: private
+        run:
+          path: sh
+          args:
+          - -c
+          - |
+            ls -la ./
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# jobs:
+# - name: list-folders
+#   plan:
+#   - get: pcf-labs
+#   - task: why
+#     config:
+#       platform: linux
+#       inputs:
+#       - name: pcf-labs
+#       outputs:
+#       - name: terraform
+#       image_resource:
+#         type: docker-image
+#         source:
+#           repository: alpine/git
+#           # tag: 18.04
+#       run:
+#         path: sh
+#         args:
+#         - -c
+#         - |
+#           ls -la ./
+#           echo "{mystate}" > ./terraform/terraform.tfstate
+#   - task: hello
+#     config:
+#       platform: linux
+#       inputs:
+#       - name: terraform
+#       image_resource:
+#         type: docker-image
+#         source:
+#           repository: alpine/git
+#           # tag: 18.04
+#       run:
+#         path: sh
+#         args:
+#         - -c
+#         - |
+#           ls -la ./
+#   - put: terraform-state
+#     params:
+#       file: terraform/terraform.tfstate
+#       acl: private
