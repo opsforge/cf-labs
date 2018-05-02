@@ -36,7 +36,7 @@ jobs:
     # This goes off and creates the tfstate (empty) and its bucket too if missing
     file: cf-labs/tasks/create-initial-terraform-state/task.yml
 
-- name: check-terraform-state
+- name: pave-bosh-lite
   serial_groups: [terraform]
   plan:
   - aggregate:
@@ -44,82 +44,29 @@ jobs:
     - get: terraform-state
       # Gets triggered by the terraform-state get because that only passes if bootstrap passed too
       trigger: true
-  - task: check-terraform-state
+  - task: plan-terraform
     config:
       platform: linux
       inputs:
         - name: cf-labs
         - name: terraform-state
+      outputs:
+        - name: terraform-state-out
       image_resource:
         type: docker-image
         source:
-          repository: alpine/git
+          repository: pcfnorm/rootfs
       run:
-        path: sh
+        path: terraform
         args:
-        - -c
         - |
-          ls -la
-          ls -la ./cf-labs
-          ls -la ./terraform-state
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# jobs:
-# - name: list-folders
-#   plan:
-#   - get: pcf-labs
-#   - task: why
-#     config:
-#       platform: linux
-#       inputs:
-#       - name: pcf-labs
-#       outputs:
-#       - name: terraform
-#       image_resource:
-#         type: docker-image
-#         source:
-#           repository: alpine/git
-#           # tag: 18.04
-#       run:
-#         path: sh
-#         args:
-#         - -c
-#         - |
-#           ls -la ./
-#           echo "{mystate}" > ./terraform/terraform.tfstate
-#   - task: hello
-#     config:
-#       platform: linux
-#       inputs:
-#       - name: terraform
-#       image_resource:
-#         type: docker-image
-#         source:
-#           repository: alpine/git
-#           # tag: 18.04
-#       run:
-#         path: sh
-#         args:
-#         - -c
-#         - |
-#           ls -la ./
-#   - put: terraform-state
-#     params:
-#       file: terraform/terraform.tfstate
-#       acl: private
+          plan -state terraform-state/terraform.tfstate \
+               -var "aws_access_key={{aws_tf_access_key}}" \
+               -var "aws_secret_key={{aws_tf_secret_key}}" \
+               -out terraform.tfplan \
+               cf-labs/pipelines/awslab/terraform
+    ensure:
+      put: terraform-state
+      params:
+        file: terraform-state-out/terraform.tfstate
+        acl: private
