@@ -25,6 +25,7 @@ jobs:
   serial_groups: [terraform]
   plan:
   - get: cf-labs
+    trigger: true
   - task: create-terraform-state
     params:
       S3_BUCKET_TERRAFORM: {{s3_bucket}}

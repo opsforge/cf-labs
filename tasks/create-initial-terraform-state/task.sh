@@ -17,7 +17,7 @@ set -eu
 # limitations under the License.
 
 ## VERIFY AND ENSURE BUCKET EXISTS
-aws --endpoint-url $S3_ENDPOINT s3 ls s3://${S3_BUCKET_TERRAFORM} || aws --endpoint-url $S3_ENDPOINT s3 mb s3://${S3_BUCKET_TERRAFORM}
+aws --endpoint-url $S3_ENDPOINT s3 ls ${S3_BUCKET_TERRAFORM} || aws --endpoint-url $S3_ENDPOINT s3 mb s3://${S3_BUCKET_TERRAFORM}
 
 files=$(aws --endpoint-url $S3_ENDPOINT s3 ls "${S3_BUCKET_TERRAFORM}/")
 
