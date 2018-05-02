@@ -7,15 +7,16 @@ resources:
     branch: {{cf_labs_git_branch}}
 
 - name: terraform-state
+  # Upped the freq to help with troubleshooting, feel free to drop
+  check_every: 20s
   type: s3
   source:
-    disable_ssl: false
     access_key_id: {{s3_access_key_id}}
     secret_access_key: {{s3_secret_access_key}}
     endpoint: {{s3_endpoint}}
     bucket: {{s3_bucket}}
-    versioned_file: terraform.tfstate
-
+    # This doesn't work with a fixed filename for no good reason
+    regexp: '(.*).tfstate'
 
 
 
@@ -32,6 +33,7 @@ jobs:
       S3_ENDPOINT: {{s3_endpoint}}
       AWS_ACCESS_KEY_ID: {{s3_access_key_id}}
       AWS_SECRET_ACCESS_KEY: {{s3_secret_access_key}}
+    # This goes off and creates the tfstate (empty) and its bucket too if missing
     file: cf-labs/tasks/create-initial-terraform-state/task.yml
 
 - name: check-terraform-state
@@ -40,9 +42,9 @@ jobs:
   - aggregate:
     - get: cf-labs
     - get: terraform-state
-    trigger: true
-    passed: [bootstrap-terraform-state]
-  - task: create-terraform-state
+      # Gets triggered by the terraform-state get because that only passes if bootstrap passed too
+      trigger: true
+  - task: check-terraform-state
     config:
       platform: linux
       inputs:
