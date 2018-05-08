@@ -46,14 +46,14 @@ jobs:
       # Gets triggered by the terraform-state get because that only passes if bootstrap passed too
       trigger: true
   - task: plan-terraform
-    config:
+    config: &tf_plan_block
       platform: linux
-      inputs:
+      inputs: &tf_inputs
         - name: cf-labs
         - name: terraform-state
       outputs:
-        - name: terraform.tfplan
-      image_resource:
+        - name: plans
+      image_resource: &tf_image
         type: docker-image
         source:
           repository: pcfnorm/rootfs
@@ -64,36 +64,62 @@ jobs:
           - |
             terraform init cf-labs/pipelines/awslab/terraform &&
             terraform plan -state terraform-state/terraform.tfstate \
-            -var "aws_access_key={{aws_tf_access_key}}" \
-            -var "aws_secret_key={{aws_tf_secret_key}}" \
-            -out terraform.tfplan \
+            -var 'ec2_key_pair_pub={{ec2_instance_key}}' \
+            -var 'aws_access_key={{aws_tf_access_key}}' \
+            -var 'aws_secret_key={{aws_tf_secret_key}}' \
+            -out plans/terraform.tfplan \
             cf-labs/pipelines/awslab/terraform
   - task: apply-terraform
-    config:
+    config: &tf_apply_block
       platform: linux
       inputs:
         - name: cf-labs
-        - name: terraform.tfplan
+        - name: plans
       outputs:
         - name: terraform-state-out
-      image_resource:
-        type: docker-image
-        source:
-          repository: pcfnorm/rootfs
+      image_resource: *tf_image
       run:
         path: sh
         args:
           - -exc
           - |
             terraform init cf-labs/pipelines/awslab/terraform &&
-            terraform apply \
+            terraform apply -auto-approve \
             -state-out terraform-state-out/terraform.tfstate \
-            -var "aws_access_key={{aws_tf_access_key}}" \
-            -var "aws_secret_key={{aws_tf_secret_key}}" \
-            terraform.tfplan \
-            cf-labs/pipelines/awslab/terraform
-    ensure:
+            plans/terraform.tfplan
+    ensure: &tf_save_state
       put: terraform-state
       params:
         file: terraform-state-out/terraform.tfstate
         acl: private
+
+
+
+- name: wipe-terraform
+  serial_groups: [terraform]
+  plan:
+  - aggregate:
+    - get: cf-labs
+    - get: terraform-state
+  # - task: plan-terraform
+  #   config: *tf_plan_block
+  - task: wipe-terraform
+    config: &tf_wipe_block
+      platform: linux
+      inputs: *tf_inputs
+      outputs:
+        - name: terraform-state-out
+      image_resource: *tf_image
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            terraform init cf-labs/pipelines/awslab/terraform &&
+            terraform destroy -auto-approve -state terraform-state/terraform.tfstate \
+            -var 'ec2_key_pair_pub={{ec2_instance_key}}' \
+            -var 'aws_access_key={{aws_tf_access_key}}' \
+            -var 'aws_secret_key={{aws_tf_secret_key}}' \
+            -state-out terraform-state-out/terraform.tfstate \
+            cf-labs/pipelines/awslab/terraform
+  ensure: *tf_save_state
