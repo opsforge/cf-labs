@@ -8,5 +8,6 @@ s3_regexp: (.*).tfstate
 s3_access_key_id: AKIAIOSFODNN7EXAMPLE
 s3_secret_access_key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 
-aws_tf_access_key: OMIT
-aws_tf_secret_key: OMIT
+# Keep commented out below if using -v arguments to pass to fly (avoiding accidental git commits)
+aws_tf_access_key: MYMAGICKEY
+aws_tf_secret_key: MYMAGICSECRET
