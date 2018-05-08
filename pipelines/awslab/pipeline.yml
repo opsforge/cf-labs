@@ -57,14 +57,16 @@ jobs:
         source:
           repository: pcfnorm/rootfs
       run:
-        path: terraform
+        path: sh
         args:
-        - |
-          plan -state terraform-state/terraform.tfstate \
-               -var "aws_access_key={{aws_tf_access_key}}" \
-               -var "aws_secret_key={{aws_tf_secret_key}}" \
-               -out terraform.tfplan \
-               cf-labs/pipelines/awslab/terraform
+          - -exc
+          - |
+            terraform init cf-labs/pipelines/awslab/terraform &&
+            terraform plan -state terraform-state/terraform.tfstate \
+            -var "aws_access_key={{aws_tf_access_key}}" \
+            -var "aws_secret_key={{aws_tf_secret_key}}" \
+            -out terraform.tfplan \
+            cf-labs/pipelines/awslab/terraform
     ensure:
       put: terraform-state
       params:
