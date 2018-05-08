@@ -11,3 +11,5 @@ s3_secret_access_key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 # Keep commented out below if using -v arguments to pass to fly (avoiding accidental git commits)
 aws_tf_access_key: MYMAGICKEY
 aws_tf_secret_key: MYMAGICSECRET
+
+ec2_instance_key: 'public_key_here'
