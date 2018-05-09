@@ -22,10 +22,10 @@ aws --endpoint-url $S3_ENDPOINT s3 ls ${S3_BUCKET_TERRAFORM} || aws --endpoint-u
 files=$(aws --endpoint-url $S3_ENDPOINT s3 ls "${S3_BUCKET_TERRAFORM}/")
 
 set +e
-echo $files | grep terraform.tfstate
+echo $files | grep '.tfstate'
 if [ "$?" -gt "0" ]; then
   echo "{\"version\": 3}" > terraform.tfstate
-  aws s3 --endpoint-url $S3_ENDPOINT cp terraform.tfstate "s3://${S3_BUCKET_TERRAFORM}/terraform.tfstate"
+  aws s3 --endpoint-url $S3_ENDPOINT cp terraform.tfstate "s3://${S3_BUCKET_TERRAFORM}/terraform-$(date +%Y-%m-%d-%H%M).tfstate"
   set +x
   if [ "$?" -gt "0" ]; then
     echo "Failed to upload empty tfstate file"

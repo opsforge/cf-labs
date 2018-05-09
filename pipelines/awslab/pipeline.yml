@@ -63,7 +63,7 @@ jobs:
           - -exc
           - |
             terraform init cf-labs/pipelines/awslab/terraform &&
-            terraform plan -state terraform-state/terraform.tfstate \
+            terraform plan -state terraform-state/$(ls -1 terraform-state | grep .tfstate) \
             -var 'ec2_key_pair_pub={{ec2_instance_key}}' \
             -var 'aws_access_key={{aws_tf_access_key}}' \
             -var 'aws_secret_key={{aws_tf_secret_key}}' \
@@ -85,12 +85,12 @@ jobs:
           - |
             terraform init cf-labs/pipelines/awslab/terraform &&
             terraform apply -auto-approve \
-            -state-out terraform-state-out/terraform.tfstate \
+            -state-out terraform-state-out/terraform-$(date +%Y-%m-%d-%H%M).tfstate \
             plans/terraform.tfplan
     ensure: &tf_save_state
       put: terraform-state
       params:
-        file: terraform-state-out/terraform.tfstate
+        file: terraform-state-out/*.tfstate
         acl: private
 
 
@@ -116,10 +116,10 @@ jobs:
           - -exc
           - |
             terraform init cf-labs/pipelines/awslab/terraform &&
-            terraform destroy -auto-approve -state terraform-state/terraform.tfstate \
+            terraform destroy -auto-approve -state terraform-state/$(ls -1 terraform-state | grep .tfstate) \
             -var 'ec2_key_pair_pub={{ec2_instance_key}}' \
             -var 'aws_access_key={{aws_tf_access_key}}' \
             -var 'aws_secret_key={{aws_tf_secret_key}}' \
-            -state-out terraform-state-out/terraform.tfstate \
+            -state-out terraform-state-out/terraform-$(date +%Y-%m-%d-%H%M).tfstate \
             cf-labs/pipelines/awslab/terraform
   ensure: *tf_save_state
