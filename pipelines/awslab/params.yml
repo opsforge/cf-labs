@@ -1,9 +1,8 @@
 cf_labs_git: https://github.com/opsforge/cf-labs.git
 cf_labs_git_branch: master
 
-s3_endpoint: https://s3.amazonaws.com
 region: eu-west-1
-s3_bucket: terraform
+s3_bucket: terraform-16c8d10f-f792-4297-87e4-39c53d3d7320
 s3_regexp: (.*).tfstate
 
 # Keep commented out below if using -v arguments to pass to fly (avoiding accidental git commits)
