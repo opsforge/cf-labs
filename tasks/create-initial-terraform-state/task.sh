@@ -26,7 +26,7 @@ aws s3 ls ${S3_BUCKET_TERRAFORM} --region ${REGION} || \
 files=$(aws s3 ls "${S3_BUCKET_TERRAFORM}/" --region ${REGION})
 
 set +e
-echo $files | grep terraform.tfstate
+echo $files | grep '.tfstate'
 if [ "$?" -gt "0" ]; then
   echo "{\"version\": 3}" > terraform.tfstate
   aws s3 cp terraform.tfstate "s3://${S3_BUCKET_TERRAFORM}/terraform.tfstate" --region ${REGION}
