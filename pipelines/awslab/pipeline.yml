@@ -28,7 +28,7 @@ resources:
     secret_access_key: {{aws_tf_secret_key}}
     endpoint: {{s3_endpoint}}
     bucket: {{s3_bucket}}
-    region_name: {{aws_region}}
+    region_name: {{region}}
     versioned_file: terraform.tfstate
 
 

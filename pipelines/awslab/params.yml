@@ -2,7 +2,7 @@ cf_labs_git: https://github.com/opsforge/cf-labs.git
 cf_labs_git_branch: master
 
 s3_endpoint: https://s3.amazonaws.com
-s3_region: eu-west-1
+region: eu-west-1
 s3_bucket: terraform
 s3_regexp: (.*).tfstate
 
