@@ -103,7 +103,7 @@ jobs:
     ensure: &tf_save_state
       put: terraform-state
       params:
-        file: terraform-state-out/terraform.tfstate
+        file: terraform-state-out/*.tfstate
         acl: private
 
 
