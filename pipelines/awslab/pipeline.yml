@@ -143,7 +143,10 @@ jobs:
         - name: terraform-state
       outputs:
         - name: bosh-out
-      image_resource: *tf_image
+      image_resource: &bosh_image
+        type: docker-image
+        source:
+          repository: concourse/bosh-cli
       run:
         path: sh
         args:
