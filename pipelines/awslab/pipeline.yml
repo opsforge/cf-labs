@@ -6,6 +6,13 @@ resources:
   source:
     uri: {{cf_labs_git}}
     branch: {{cf_labs_git_branch}}
+    
+- name: bosh-deployments
+  check_every: 60s
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry/bosh-deployment.git
+    branch: master
 
     # - name: terraform-state
     #   # Upped the freq to help with troubleshooting, feel free to drop
@@ -131,8 +138,11 @@ jobs:
   - aggregate:
     - get: cf-labs
     - get: terraform-state
+      passed: [pave-bosh-lite]
+      trigger: true
     - get: bosh-creds
     - get: bosh-state
+    - get: bosh-deployments
       # Gets triggered by the terraform-state get because that only passes if bootstrap passed too
       # trigger: true
   - task: bosh-lite-configure
@@ -141,18 +151,43 @@ jobs:
       inputs: &bosh_input_files
         - name: cf-labs
         - name: terraform-state
+        - name: bosh-deployments
       outputs:
         - name: bosh-out
       image_resource: &bosh_image
         type: docker-image
         source:
-          repository: concourse/bosh-cli
+          repository: orangecloudfoundry/orange-cf-bosh-cli
       run:
         path: sh
         args:
           - -exc
           - |
-            bosh --help
+            bosh create-env bosh-deployment/bosh.yml \
+            --state=terraform-state/state.json \
+            --vars-store=terraform-state/creds.yml \
+            -o bosh-deployment/aws/cpi.yml \
+            -o bosh-deployment/bosh-lite.yml \
+            -o bosh-deployment/bosh-lite-runc.yml \
+            -o bosh-deployment/jumpbox-user.yml \ 
+            -o bosh-deployment/external-ip-with-registry-not-recommended.yml \
+            -v director_name=$(terraform output -state=terraform-state/terraform.tfstate bosh_name | sed 's/^.*=.//') \
+            -v internal_cidr=$(terraform output -state=terraform-state/terraform.tfstate base_cidr | sed 's/^.*=.//') \
+            -v internal_gw=$(terraform output -state=terraform-state/terraform.tfstate gw_ip | sed 's/^.*=.//') \
+            -v internal_ip=$(terraform output -state=terraform-state/terraform.tfstate bosh_ip | sed 's/^.*=.//') \
+            -v access_key_id={{aws_tf_access_key}} \
+            -v secret_access_key={{aws_tf_secret_key}} \
+            -v region=$(terraform output -state=terraform-state/terraform.tfstate region | sed 's/^.*=.//') \
+            -v az=$(terraform output -state=terraform-state/terraform.tfstate az | sed 's/^.*=.//') \
+            -v default_key_name=$(terraform output -state=terraform-state/terraform.tfstate ec2_keyname | sed 's/^.*=.//') \
+            -v default_security_groups=[$(terraform output -state=terraform-state/terraform.tfstate default_sg_name | sed 's/^.*=.//')] \
+            --var-file private_key=~/Downloads/bosh.pem \
+            -v subnet_id=$(terraform output -state=terraform-state/terraform.tfstate base_subnet | sed 's/^.*=.//') \
+            -v external_ip=$(terraform output -state=terraform-state/terraform.tfstate bosh_eip | sed 's/^.*=.//') && \
+            \
+            cp terraform-state/state.json bosh-out/state.json && \
+            cp terraform-state/creds.yml bosh-out/creds.yml
+            
     ensure: &bosh_save_files
       put: bosh-creds
       params:
