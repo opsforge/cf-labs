@@ -9,4 +9,4 @@ s3_regexp: (.*).tfstate
 aws_tf_access_key: MYMAGICKEY
 aws_tf_secret_key: MYMAGICSECRET
 
-ec2_instance_key: 'public_key_here'
+ec2_instance_key: 'MYPUBLIC_KEY'
