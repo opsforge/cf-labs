@@ -37,7 +37,6 @@ if [ "$?" -gt "0" ]; then
   fi
 else
   echo "terraform.tfstate file found, skipping"
-  exit 0
 fi
 
 set +e
@@ -52,7 +51,6 @@ if [ "$?" -gt "0" ]; then
   fi
 else
   echo "creds.yml file found, skipping"
-  exit 0
 fi
 
 set +e
@@ -67,5 +65,6 @@ if [ "$?" -gt "0" ]; then
   fi
 else
   echo "state.json file found, skipping"
-  exit 0
 fi
+
+exit 0
