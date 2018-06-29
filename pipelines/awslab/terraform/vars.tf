@@ -16,7 +16,8 @@ variable "bosh_subnet_az"            { default = "eu-west-1a" }
 variable "dhcp_opt_domain"           { default = "eu-west-1.compute.internal" }
 variable "dhcp_opt_dnshosts"         { default = [ "AmazonProvidedDNS" ] }
 
-variable "elbs_wwwsg_name"           { default = "paas-live-www-sg" }
-variable "elbs_wwwsg_desc"           { default = "Allow WWW traffic to load balancers" }
-variable "elbs_intsg_name"           { default = "paas-live-int-sg" }
-variable "elbs_intsg_desc"           { default = "Allow full internal traffic between load balancer and stack" }
+variable "default_sg_name"           { default = "bosh" }
+variable "my_publicip"               { default = "0.0.0.0/0" }
+variable "bosh_director_name"        { default = "bosh-lite-director" }
+
+

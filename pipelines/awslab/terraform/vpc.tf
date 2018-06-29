@@ -50,3 +50,7 @@ resource "aws_route" "internet_access" {
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = "${aws_internet_gateway.bosh-lite-igw.id}"
 }
+
+resource "aws_eip" "bosh_eip" {
+  vpc      = true
+}
