@@ -39,3 +39,33 @@ else
   echo "terraform.tfstate file found, skipping"
   exit 0
 fi
+
+set +e
+echo $files | grep 'creds.yml'
+if [ "$?" -gt "0" ]; then
+  echo "---" > creds.yml
+  aws s3 cp creds.yml "s3://${S3_BUCKET_TERRAFORM}/creds.yml" --region ${REGION}
+  set +x
+  if [ "$?" -gt "0" ]; then
+    echo "Failed to upload empty creds.yml file"
+    exit 1
+  fi
+else
+  echo "creds.yml file found, skipping"
+  exit 0
+fi
+
+set +e
+echo $files | grep 'state.json'
+if [ "$?" -gt "0" ]; then
+  echo "---" > creds.yml
+  aws s3 cp state.json "s3://${S3_BUCKET_TERRAFORM}/state.json" --region ${REGION}
+  set +x
+  if [ "$?" -gt "0" ]; then
+    echo "Failed to upload empty state.json file"
+    exit 1
+  fi
+else
+  echo "state.json file found, skipping"
+  exit 0
+fi

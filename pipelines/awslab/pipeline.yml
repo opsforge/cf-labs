@@ -29,6 +29,26 @@ resources:
     bucket: {{s3_bucket}}
     region_name: {{region}}
     versioned_file: terraform.tfstate
+- name: bosh-creds
+  check_every: 20s
+  type: s3
+  source:
+    disable_ssl: false
+    access_key_id: {{aws_tf_access_key}}
+    secret_access_key: {{aws_tf_secret_key}}
+    bucket: {{s3_bucket}}
+    region_name: {{region}}
+    versioned_file: creds.yml
+- name: bosh-state
+  check_every: 20s
+  type: s3
+  source:
+    disable_ssl: false
+    access_key_id: {{aws_tf_access_key}}
+    secret_access_key: {{aws_tf_secret_key}}
+    bucket: {{s3_bucket}}
+    region_name: {{region}}
+    versioned_file: state.json
 
 
 
@@ -104,8 +124,43 @@ jobs:
       params:
         file: terraform-state-out/*.tfstate
         acl: private
-
-
+        
+- name: deploy-bosh-lite
+  serial_groups: [bosh]
+  plan:
+  - aggregate:
+    - get: cf-labs
+    - get: terraform-state
+    - get: bosh-creds
+    - get: bosh-state
+      # Gets triggered by the terraform-state get because that only passes if bootstrap passed too
+      # trigger: true
+  - task: bosh-lite-configure
+    config: &bosh_deploy
+      platform: linux
+      inputs: &bosh_input_files
+        - name: cf-labs
+        - name: terraform-state
+      outputs:
+        - name: bosh-out
+      image_resource: *tf_image
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            bosh --help
+    ensure: &bosh_save_files
+      put: bosh-creds
+      params:
+        file: bosh-out/creds.yml
+        acl: private
+      put: bosh-state
+      params:
+        file: bosh-out/state.json
+        acl: private
+            
+            
 
 - name: wipe-terraform
   serial_groups: [terraform]
@@ -135,4 +190,4 @@ jobs:
             -var 'aws_secret_key={{aws_tf_secret_key}}' \
             -state-out terraform-state-out/terraform.tfstate \
             cf-labs/pipelines/awslab/terraform
-  ensure: *tf_save_state
+    ensure: *tf_save_state
