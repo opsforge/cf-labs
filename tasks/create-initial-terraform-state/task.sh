@@ -58,7 +58,7 @@ fi
 set +e
 echo $files | grep 'state.json'
 if [ "$?" -gt "0" ]; then
-  echo "---" > creds.yml
+  echo "{}" > state.json
   aws s3 cp state.json "s3://${S3_BUCKET_TERRAFORM}/state.json" --region ${REGION}
   set +x
   if [ "$?" -gt "0" ]; then
