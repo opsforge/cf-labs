@@ -91,10 +91,10 @@ jobs:
         - name: terraform-state
       outputs:
         - name: plans
-      image_resource: &tf_image
+      image_resource: &standard_image
         type: docker-image
         source:
-          repository: pcfnorm/rootfs
+          repository: opsforge/concourse-tools
       run:
         path: sh
         args:
@@ -116,7 +116,7 @@ jobs:
         - name: plans
       outputs:
         - name: terraform-state-out
-      image_resource: *tf_image
+      image_resource: *standard_image
       run:
         path: sh
         args:
@@ -154,15 +154,15 @@ jobs:
         - name: bosh-deployments
       outputs:
         - name: bosh-out
-      image_resource: &bosh_image
-        type: docker-image
-        source:
-          repository: orangecloudfoundry/orange-cf-bosh-cli
+      image_resource: *standard_image
       run:
         path: sh
         args:
           - -exc
           - |
+            cat <<EOF > bosh.pem
+            {{ec2_private_key}}
+            EOF && \
             bosh create-env bosh-deployment/bosh.yml \
             --state=terraform-state/state.json \
             --vars-store=terraform-state/creds.yml \
@@ -181,7 +181,7 @@ jobs:
             -v az=$(terraform output -state=terraform-state/terraform.tfstate az | sed 's/^.*=.//') \
             -v default_key_name=$(terraform output -state=terraform-state/terraform.tfstate ec2_keyname | sed 's/^.*=.//') \
             -v default_security_groups=[$(terraform output -state=terraform-state/terraform.tfstate default_sg_name | sed 's/^.*=.//')] \
-            --var-file private_key=~/Downloads/bosh.pem \
+            --var-file private_key=bosh.pem \
             -v subnet_id=$(terraform output -state=terraform-state/terraform.tfstate base_subnet | sed 's/^.*=.//') \
             -v external_ip=$(terraform output -state=terraform-state/terraform.tfstate bosh_eip | sed 's/^.*=.//') && \
             \
@@ -191,13 +191,8 @@ jobs:
     ensure: &bosh_save_files
       put: bosh-creds
       params:
-        file: bosh-out/creds.yml
+        file: bosh-out/*
         acl: private
-      put: bosh-state
-      params:
-        file: bosh-out/state.json
-        acl: private
-            
             
 
 - name: wipe-terraform
@@ -214,7 +209,7 @@ jobs:
       inputs: *tf_inputs
       outputs:
         - name: terraform-state-out
-      image_resource: *tf_image
+      image_resource: *standard_image
       run:
         path: sh
         args:
