@@ -4,7 +4,7 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: pcfnorm/rootfs
+    repository: orangecloudfoundry/orange-cf-bosh-cli
 
 inputs:
 - name: cf-labs
