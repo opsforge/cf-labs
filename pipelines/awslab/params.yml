@@ -10,3 +10,7 @@ aws_tf_access_key: MYMAGICKEY
 aws_tf_secret_key: MYMAGICSECRET
 
 ec2_instance_key: 'MYPUBLIC_KEY'
+ec2_private_key: |
+  -----BEGIN RSA PRIVATE KEY-----
+  PUTKEYHERE
+  -----END RSA PRIVATE KEY-----
