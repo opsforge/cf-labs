@@ -54,6 +54,20 @@ else
 fi
 
 set +e
+echo $files | grep 'deployment-vars.yml'
+if [ "$?" -gt "0" ]; then
+  echo "---" > deployment-vars.yml
+  aws s3 cp deployment-vars.yml "s3://${S3_BUCKET_TERRAFORM}/deployment-vars.yml" --region ${REGION}
+  set +x
+  if [ "$?" -gt "0" ]; then
+    echo "Failed to upload empty deployment-vars.yml file"
+    exit 1
+  fi
+else
+  echo "deployment-vars.yml file found, skipping"
+fi
+
+set +e
 echo $files | grep 'state.json'
 if [ "$?" -gt "0" ]; then
   echo "{}" > state.json
