@@ -7,7 +7,7 @@ resources:
     uri: {{cf_labs_git}}
     branch: {{cf_labs_git_branch}}
     
-- name: bosh-deployments
+- name: bosh-deployment
   check_every: 60s
   type: git
   source:
@@ -142,7 +142,7 @@ jobs:
       trigger: true
     - get: bosh-creds
     - get: bosh-state
-    - get: bosh-deployments
+    - get: bosh-deployment
       # Gets triggered by the terraform-state get because that only passes if bootstrap passed too
       # trigger: true
   - task: bosh-lite-configure
@@ -151,7 +151,7 @@ jobs:
       inputs: &bosh_input_files
         - name: cf-labs
         - name: terraform-state
-        - name: bosh-deployments
+        - name: bosh-deployment
       outputs:
         - name: bosh-out
       image_resource: *standard_image
@@ -160,16 +160,14 @@ jobs:
         args:
           - -exc
           - |
-            cat <<EOF > bosh.pem
-            {{ec2_private_key}}
-            EOF && \
+            echo {{ec2_private_key}} > bosh.pem && chmod 0400 bosh.pem &&
             bosh create-env bosh-deployment/bosh.yml \
-            --state=terraform-state/state.json \
-            --vars-store=terraform-state/creds.yml \
+            --state terraform-state/state.json \
+            --vars-store terraform-state/creds.yml \
             -o bosh-deployment/aws/cpi.yml \
             -o bosh-deployment/bosh-lite.yml \
             -o bosh-deployment/bosh-lite-runc.yml \
-            -o bosh-deployment/jumpbox-user.yml \ 
+            -o bosh-deployment/jumpbox-user.yml \
             -o bosh-deployment/external-ip-with-registry-not-recommended.yml \
             -v director_name=$(terraform output -state=terraform-state/terraform.tfstate bosh_name | sed 's/^.*=.//') \
             -v internal_cidr=$(terraform output -state=terraform-state/terraform.tfstate base_cidr | sed 's/^.*=.//') \
@@ -180,19 +178,23 @@ jobs:
             -v region=$(terraform output -state=terraform-state/terraform.tfstate region | sed 's/^.*=.//') \
             -v az=$(terraform output -state=terraform-state/terraform.tfstate az | sed 's/^.*=.//') \
             -v default_key_name=$(terraform output -state=terraform-state/terraform.tfstate ec2_keyname | sed 's/^.*=.//') \
-            -v default_security_groups=[$(terraform output -state=terraform-state/terraform.tfstate default_sg_name | sed 's/^.*=.//')] \
+            -v default_security_groups=[$(terraform output -state=terraform-state/terraform.tfstate ec2_secgroup | sed 's/^.*=.//')] \
             --var-file private_key=bosh.pem \
             -v subnet_id=$(terraform output -state=terraform-state/terraform.tfstate base_subnet | sed 's/^.*=.//') \
-            -v external_ip=$(terraform output -state=terraform-state/terraform.tfstate bosh_eip | sed 's/^.*=.//') && \
-            \
-            cp terraform-state/state.json bosh-out/state.json && \
+            -v external_ip=$(terraform output -state=terraform-state/terraform.tfstate bosh_eip | sed 's/^.*=.//') &&
+            cp terraform-state/state.json bosh-out/state.json &&
             cp terraform-state/creds.yml bosh-out/creds.yml
             
     ensure: &bosh_save_files
-      put: bosh-creds
-      params:
-        file: bosh-out/*
-        acl: private
+      do:
+        - put: bosh-creds
+          params:
+            file: bosh-out/creds.yml
+            acl: private
+        - put: bosh-state
+          params:
+            file: bosh-out/state.json
+            acl: private
             
 
 - name: wipe-terraform
