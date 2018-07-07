@@ -7,6 +7,20 @@ resources:
     uri: {{cf_labs_git}}
     branch: {{cf_labs_git_branch}}
     
+- name: cf-deployment
+  check_every: 30s
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry/cf-deployment.git
+    branch: master
+
+- name: stratos
+  check_every: 30s
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry-incubator/stratos.git
+    branch: v2-master
+    
 - name: bosh-deployment
   check_every: 60s
   type: git
@@ -56,10 +70,24 @@ resources:
     bucket: {{s3_bucket}}
     region_name: {{region}}
     versioned_file: state.json
+- name: cf-vars
+  check_every: 20s
+  type: s3
+  source:
+    disable_ssl: false
+    access_key_id: {{aws_tf_access_key}}
+    secret_access_key: {{aws_tf_secret_key}}
+    bucket: {{s3_bucket}}
+    region_name: {{region}}
+    versioned_file: deployment-vars.yml
 
 
 
 jobs:
+
+
+
+
 
 - name: bootstrap-terraform-state
   serial_groups: [terraform]
@@ -131,7 +159,6 @@ jobs:
       params:
         file: terraform-state-out/*.tfstate
         acl: private
-        
 - name: deploy-bosh-lite
   serial_groups: [bosh]
   plan:
@@ -163,10 +190,12 @@ jobs:
           - -exc
           - |
             echo {{ec2_private_key}} > bosh.pem && chmod 0400 bosh.pem &&
+            wget 'https://raw.githubusercontent.com/cloudfoundry/bosh-deployment/master/aws/cpi.yml' &&
+            sed -i 's/m4\.xlarge/t2\.xlarge/' cpi.yml &&
             bosh create-env bosh-deployment/bosh.yml \
             --state bosh-state/state.json \
             --vars-store bosh-creds/creds.yml \
-            -o bosh-deployment/aws/cpi.yml \
+            -o cpi.yml \
             -o bosh-deployment/bosh-lite.yml \
             -o bosh-deployment/bosh-lite-runc.yml \
             -o bosh-deployment/jumpbox-user.yml \
@@ -182,11 +211,11 @@ jobs:
             -v default_key_name=$(terraform output -state=terraform-state/terraform.tfstate ec2_keyname | sed 's/^.*=.//') \
             -v default_security_groups=[$(terraform output -state=terraform-state/terraform.tfstate ec2_secgroup | sed 's/^.*=.//')] \
             --var-file private_key=bosh.pem \
+            -v 
             -v subnet_id=$(terraform output -state=terraform-state/terraform.tfstate base_subnet | sed 's/^.*=.//') \
             -v external_ip=$(terraform output -state=terraform-state/terraform.tfstate bosh_eip | sed 's/^.*=.//') &&
             cp bosh-state/state.json bosh-out/state.json &&
             cp bosh-creds/creds.yml bosh-out/creds.yml
-            
     ensure: &bosh_save_files
       do:
         - put: bosh-creds
@@ -197,6 +226,127 @@ jobs:
           params:
             file: bosh-out/state.json
             acl: private
+
+
+
+
+
+
+
+
+
+- name: cf-deploy
+  serial_groups: [cf]
+  plan:
+  - aggregate:
+    - get: cf-deployment
+    - get: cf-labs
+    - get: terraform-state
+      passed: [deploy-bosh-lite]
+      trigger: true
+    - get: bosh-creds
+    - get: bosh-state
+    - get: bosh-deployment
+    - get: cf-vars
+      # Gets triggered by the terraform-state get because that only passes if bootstrap passed too
+      # trigger: true
+  - task: cf-lite-setup
+    config: &bosh_deploy
+      platform: linux
+      inputs: &cf_input_files
+        - name: cf-deployment
+        - name: cf-labs
+        - name: terraform-state
+        - name: bosh-deployment
+        - name: bosh-creds
+        - name: bosh-state
+        - name: cf-vars
+      outputs:
+        - name: cf-vars-out
+      image_resource: *standard_image
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            export BOSH_PUBLIC_IP=$(terraform output -state=terraform-state/terraform.tfstate bosh_eip | sed 's/^.*=.//') &&
+            bosh int bosh-creds/creds.yml --path /director_ssl/ca > ca.pem && chmod 0400 ca.pem &&
+            bosh alias-env bosh-lite \
+            -e $BOSH_PUBLIC_IP \
+            --ca-cert ca.pem &&
+            export BOSH_CLIENT=admin &&
+            export BOSH_CLIENT_SECRET=$(bosh int bosh-creds/creds.yml --path /admin_password) &&
+            export BOSH_ENVIRONMENT="$BOSH_PUBLIC_IP"
+            # export BOSH_ENVIRONMENT=$(terraform output -state=terraform-state/terraform.tfstate bosh_ip | sed 's/^.*=.//') &&
+            export BOSH_CA_CERT="$(bosh int bosh-creds/creds.yml --path /director_ssl/ca)" &&
+            # bosh int bosh-creds/creds.yml --path=/jumpbox_ssh/private_key  > jumpbox.key &&
+            # chmod 0400 jumpbox.key &&
+            # ssh -4 -D 5000 -fNC jumpbox@$BOSH_PUBLIC_IP -i jumpbox.key &&
+            # export BOSH_ALL_PROXY=socks5://localhost:5000 &&
+            bosh -e bosh-lite update-cloud-config cf-deployment/iaas-support/bosh-lite/cloud-config.yml -n &&
+            bosh upload-stemcell https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent &&
+            echo "
+            THIS WILL TAKE FOREVER, PLEASE WAIT
+            " &&
+            bosh -e bosh-lite -d cf deploy cf-deployment/cf-deployment.yml -o cf-deployment/operations/bosh-lite.yml --vars-store deployment-vars.yml -v system_domain=$BOSH_PUBLIC_IP.sslip.io -n &&
+            echo "
+            HOPEFULLY THATS CF LITE DEPLOYED, BUT LETS MAKE SURE...
+            " &&
+            bosh -e bosh-lite -d cf vms &&
+            bosh -e bosh-lite -d cf cloud-check &&
+            cp deployment-vars.yml cf-vars-out/deployment-vars.yml &&
+            CF_ADMIN_PASS=$(bosh int cf-vars-out/deployment-vars.yml --path /cf_admin_password)
+            echo "CF API: api.$BOSH_PUBLIC_IP.sslip.io"
+            echo "CF ADMIN PASS: $CF_ADMIN_PASS"
+    ensure: &cf_var_save
+      do:
+        - put: cf-vars
+          params:
+            file: cf-vars-out/deployment-vars.yml
+            acl: private
+- name: cf-ui-deploy
+  serial_groups: [cf]
+  plan:
+  - aggregate:
+    - get: terraform-state
+    - get: stratos
+    - get: cf-vars
+      passed: [cf-deploy]
+      trigger: true
+  - task: stratos-setup
+    config: 
+      platform: linux
+      inputs:
+        - name: terraform-state
+        - name: cf-vars
+        - name: stratos
+      image_resource: *standard_image
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            CF_ADMIN_PASS=$(bosh int cf-vars/deployment-vars.yml --path /cf_admin_password) &&
+            export BOSH_PUBLIC_IP=$(terraform output -state=terraform-state/terraform.tfstate bosh_eip | sed 's/^.*=.//') &&
+            cf login --skip-ssl-validation -a api.$BOSH_PUBLIC_IP.sslip.io -u admin -p $CF_ADMIN_PASS -o system &&
+            cd stratos &&
+            cf create-org cfui
+            cf target -o cfui &&
+            cf create-space prod
+            cf target -o cfui -s prod &&
+            cf delete-route $BOSH_PUBLIC_IP.sslip.io --hostname console -f
+            cf push
+
+
+
+
+
+
+
+
+
+
+
 - name: nuke-bosh-lite
   serial_groups: [bosh]
   plan:
@@ -211,14 +361,9 @@ jobs:
       # Gets triggered by the terraform-state get because that only passes if bootstrap passed too
       # trigger: true
   - task: bosh-lite-destroy
-    config: &bosh_deploy
+    config:
       platform: linux
-      inputs: &bosh_input_files
-        - name: cf-labs
-        - name: terraform-state
-        - name: bosh-deployment
-        - name: bosh-creds
-        - name: bosh-state
+      inputs: *bosh_input_files
       outputs:
         - name: bosh-out
       image_resource: *standard_image
@@ -228,10 +373,12 @@ jobs:
           - -exc
           - |
             echo {{ec2_private_key}} > bosh.pem && chmod 0400 bosh.pem &&
+            wget 'https://raw.githubusercontent.com/cloudfoundry/bosh-deployment/master/aws/cpi.yml' &&
+            sed -i 's/m4\.xlarge/t2\.xlarge/' cpi.yml &&
             bosh delete-env bosh-deployment/bosh.yml \
             --state bosh-state/state.json \
             --vars-store bosh-creds/creds.yml \
-            -o bosh-deployment/aws/cpi.yml \
+            -o cpi.yml \
             -o bosh-deployment/bosh-lite.yml \
             -o bosh-deployment/bosh-lite-runc.yml \
             -o bosh-deployment/jumpbox-user.yml \
@@ -253,19 +400,7 @@ jobs:
             echo "{}" > state.json &&
             cp state.json bosh-out/state.json &&
             cp creds.yml bosh-out/creds.yml
-            
-    ensure: &bosh_save_files
-      do:
-        - put: bosh-creds
-          params:
-            file: bosh-out/creds.yml
-            acl: private
-        - put: bosh-state
-          params:
-            file: bosh-out/state.json
-            acl: private
-            
-
+    ensure: *bosh_save_files
 - name: wipe-terraform
   serial_groups: [terraform]
   plan:
