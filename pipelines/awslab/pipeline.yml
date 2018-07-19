@@ -211,7 +211,6 @@ jobs:
             -v default_key_name=$(terraform output -state=terraform-state/terraform.tfstate ec2_keyname | sed 's/^.*=.//') \
             -v default_security_groups=[$(terraform output -state=terraform-state/terraform.tfstate ec2_secgroup | sed 's/^.*=.//')] \
             --var-file private_key=bosh.pem \
-            -v 
             -v subnet_id=$(terraform output -state=terraform-state/terraform.tfstate base_subnet | sed 's/^.*=.//') \
             -v external_ip=$(terraform output -state=terraform-state/terraform.tfstate bosh_eip | sed 's/^.*=.//') &&
             cp bosh-state/state.json bosh-out/state.json &&
