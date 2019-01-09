@@ -283,7 +283,7 @@ jobs:
             # ssh -4 -D 5000 -fNC jumpbox@$BOSH_PUBLIC_IP -i jumpbox.key &&
             # export BOSH_ALL_PROXY=socks5://localhost:5000 &&
             bosh -e bosh-lite update-cloud-config cf-deployment/iaas-support/bosh-lite/cloud-config.yml -n &&
-            bosh upload-stemcell https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent &&
+            bosh upload-stemcell https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent &&
             echo "
             THIS WILL TAKE FOREVER, PLEASE WAIT
             " &&
