@@ -239,6 +239,8 @@ jobs:
   plan:
   - aggregate:
     - get: cf-deployment
+      version: 
+        ref: "4f8f07389a640c52db4f0aca47db7e44d01a0f17"
     - get: cf-labs
     - get: terraform-state
       passed: [deploy-bosh-lite]
@@ -283,7 +285,7 @@ jobs:
             # ssh -4 -D 5000 -fNC jumpbox@$BOSH_PUBLIC_IP -i jumpbox.key &&
             # export BOSH_ALL_PROXY=socks5://localhost:5000 &&
             bosh -e bosh-lite update-cloud-config cf-deployment/iaas-support/bosh-lite/cloud-config.yml -n &&
-            bosh upload-stemcell https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent &&
+            bosh upload-stemcell https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent?v=3586.23 &&
             echo "
             THIS WILL TAKE FOREVER, PLEASE WAIT
             " &&
@@ -309,6 +311,8 @@ jobs:
   - aggregate:
     - get: terraform-state
     - get: stratos
+      version: 
+        ref: "e52e4588fea773591e0306c481831a7934a07606"
     - get: cf-vars
       passed: [cf-deploy]
       trigger: true
