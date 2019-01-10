@@ -2,6 +2,12 @@
 
 A quick lab project to simulate the open source Cloud Foundry installation trough concourse into AWS.
 
+Fully chained and automated pipeline with Concourse 4 support:
+![pipeline overview in concourse](https://raw.githubusercontent.com/opsforge/cf-labs/master/docs/img/pipeline.png)
+
+Stratos console auto-deployed:
+![stratos console](https://raw.githubusercontent.com/opsforge/cf-labs/master/docs/img/stratos.png)
+
 ## How-To
 
 Use a concourse 4 for this.
