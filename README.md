@@ -8,24 +8,31 @@ Use a concourse 4 for this.
 
 clone the project and `cd` into the folder.
 
-Run the following command to generate an ssh keypair for this project: `ssh-keygen` and then for filename type in `./cflabs.pem`
+use the fly CLI to log in (use this address only if using ANViL):
+```
+fly -t CONCOURSE-LOCAL login -c http://concourse:8003 -u concourse -p Standard1
+fly -t CONCOURSE-LOCAL sync
+```
 
-`cat ./cflabs.pem.pub` - copy the returned value of this command and paste it into the command later on.
-
-`cat /proc/sys/kernel/random/uuid` - add the value of this to your fly command as the bucket suffix to avoid a name clash with an existing s3 bucket.
+Run the following commands to generate the ssh keys and bucket ID:
+```
+if [[ ! -f ./cflabs.pem ]] ; then ; ssh-keygen -f ./cflabs.pem -N '' ; fi ;
+if [[ ! -f ./tfuid ]] ; then ; cat /proc/sys/kernel/random/uuid > ./tfuid.tmp ; fi ;
+```
 
 Run the following fly command once you have logged in to concourse 4 with fly:
 
 ```
-fly -t CONCOURSE_ALIAS \
+fly -t CONCOURSE-LOCAL \
     sp \
     -n \
     -p awslab -c pipelines/awslab/pipeline.yml \
     -l pipelines/awslab/params.yml \
     -v aws_tf_access_key="YOUR_ACCESS_KEY_HERE" \
     -v aws_tf_secret_key="YOUR_SECRET_KEY_HERE" \
-    -v ec2_instance_key="PASTE_THE_CAT_VALUE_HERE" \
-    -v s3_bucket="terraform-UUID_HERE"
+    -v ec2_instance_key="$(cat ./cflabs.pem.pub)" \
+    -v s3_bucket="terraform-$(cat ./tfuid.tmp)" \
+    -v ec2_private_key="$(cat ./cflabs.pem)"
 ```
 
 ## Install

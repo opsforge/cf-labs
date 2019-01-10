@@ -205,7 +205,7 @@ jobs:
             -v internal_gw=$(terraform output -state=terraform-state/terraform.tfstate gw_ip | sed 's/^.*=.//') \
             -v internal_ip=$(terraform output -state=terraform-state/terraform.tfstate bosh_ip | sed 's/^.*=.//') \
             -v access_key_id={{aws_tf_access_key}} \
-            -v secret_access_key={{aws_tf_secret_key}} \
+            -v secret_access_key=((aws_tf_secret_key)) \
             -v region=$(terraform output -state=terraform-state/terraform.tfstate region | sed 's/^.*=.//') \
             -v az=$(terraform output -state=terraform-state/terraform.tfstate az | sed 's/^.*=.//') \
             -v default_key_name=$(terraform output -state=terraform-state/terraform.tfstate ec2_keyname | sed 's/^.*=.//') \
