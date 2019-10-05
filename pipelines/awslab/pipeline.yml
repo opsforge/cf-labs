@@ -322,7 +322,6 @@ jobs:
             export BOSH_PUBLIC_IP=$(terraform output -state=terraform-state/terraform.tfstate bosh_eip | sed 's/^.*=.//') &&
             cf login --skip-ssl-validation -a api.$BOSH_PUBLIC_IP.sslip.io -u admin -p $CF_ADMIN_PASS -o system &&
             cf enable-feature-flag diego_docker
-            cd stratos &&
             cf create-org cfui
             cf target -o cfui &&
             cf create-space prod
