@@ -41,19 +41,6 @@ fly -t CONCOURSE-LOCAL \
     -v ec2_private_key="$(cat ./cflabs.pem)"
 ```
 
-### post-trusty fixes (after July 2018)
-
-At this point it's unclear whether it's due to the cf-deployments or the xenial base distro, but the `diego-api` components fail to start if all deployment manifests are left on latest. In addtion, stratos versions higher than `2.0.0` fail to start on pre-July CF. As a result to this, the following hotfix needs to be executed through fly (required addtions are in the pipeline).
-
-Only run this once the `fly sp` command has been executed in the previous step as it depends on the resources from that.
-```
-fly -t CONCOURSE-LOCAL check-resource --resource awslab/cf-deployment --from ref:4f8f07389a640c52db4f0aca47db7e44d01a0f17
-fly -t CONCOURSE-LOCAL check-resource --resource awslab/stratos --from ref:e52e4588fea773591e0306c481831a7934a07606
-```
-
-Investigation is ongoing into why this is happening and what can be done to fix it. In the meantime this makes the stack and pipeline functional, albeit on lower than current version.
-
-
 ## Install
 
 Once the pipeline is imported and unpaused, you can launch it with the `bootstrap-terraform-state` job. Select the job in the GUI and press the + sign in the upper right corner.

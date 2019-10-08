@@ -14,13 +14,6 @@ resources:
     uri: https://github.com/cloudfoundry/cf-deployment.git
     branch: master
 
-- name: stratos
-  check_every: 30s
-  type: git
-  source:
-    uri: https://github.com/cloudfoundry-incubator/stratos.git
-    branch: v2-master
-    
 - name: bosh-deployment
   check_every: 60s
   type: git
@@ -239,8 +232,6 @@ jobs:
   plan:
   - aggregate:
     - get: cf-deployment
-      version: 
-        ref: "4f8f07389a640c52db4f0aca47db7e44d01a0f17"
     - get: cf-labs
     - get: terraform-state
       passed: [deploy-bosh-lite]
@@ -285,7 +276,9 @@ jobs:
             # ssh -4 -D 5000 -fNC jumpbox@$BOSH_PUBLIC_IP -i jumpbox.key &&
             # export BOSH_ALL_PROXY=socks5://localhost:5000 &&
             bosh -e bosh-lite update-cloud-config cf-deployment/iaas-support/bosh-lite/cloud-config.yml -n &&
-            bosh upload-stemcell https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent?v=3586.23 &&
+            bosh int bosh-deployment/runtime-configs/dns.yml --vars-store deployment-vars.yml > dns.yml
+            bosh update-runtime-config dns.yml --name dns -n &&
+            bosh upload-stemcell https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent?v=456.22 &&
             echo "
             THIS WILL TAKE FOREVER, PLEASE WAIT
             " &&
@@ -310,9 +303,6 @@ jobs:
   plan:
   - aggregate:
     - get: terraform-state
-    - get: stratos
-      version: 
-        ref: "e52e4588fea773591e0306c481831a7934a07606"
     - get: cf-vars
       passed: [cf-deploy]
       trigger: true
@@ -322,7 +312,6 @@ jobs:
       inputs:
         - name: terraform-state
         - name: cf-vars
-        - name: stratos
       image_resource: *standard_image
       run:
         path: sh
@@ -332,13 +321,12 @@ jobs:
             CF_ADMIN_PASS=$(bosh int cf-vars/deployment-vars.yml --path /cf_admin_password) &&
             export BOSH_PUBLIC_IP=$(terraform output -state=terraform-state/terraform.tfstate bosh_eip | sed 's/^.*=.//') &&
             cf login --skip-ssl-validation -a api.$BOSH_PUBLIC_IP.sslip.io -u admin -p $CF_ADMIN_PASS -o system &&
-            cd stratos &&
+            cf enable-feature-flag diego_docker
             cf create-org cfui
             cf target -o cfui &&
             cf create-space prod
             cf target -o cfui -s prod &&
-            cf delete-route $BOSH_PUBLIC_IP.sslip.io --hostname console -f
-            cf push
+            cf push console -o splatform/stratos:latest -m 128M -k 384M
 
 
 
