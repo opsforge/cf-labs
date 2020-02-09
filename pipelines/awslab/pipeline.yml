@@ -365,7 +365,7 @@ jobs:
           - |
             echo {{ec2_private_key}} > bosh.pem && chmod 0400 bosh.pem &&
             wget 'https://raw.githubusercontent.com/cloudfoundry/bosh-deployment/master/aws/cpi.yml' &&
-            sed -i 's/m4\.xlarge/t2\.xlarge/' cpi.yml &&
+            sed -i 's/m5\.xlarge/t3\.xlarge/' cpi.yml &&
             bosh delete-env bosh-deployment/bosh.yml \
             --state bosh-state/state.json \
             --vars-store bosh-creds/creds.yml \
