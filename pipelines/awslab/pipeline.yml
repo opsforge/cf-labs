@@ -278,11 +278,11 @@ jobs:
             bosh -e bosh-lite update-cloud-config cf-deployment/iaas-support/bosh-lite/cloud-config.yml -n &&
             bosh int bosh-deployment/runtime-configs/dns.yml --vars-store deployment-vars.yml > dns.yml
             bosh update-runtime-config dns.yml --name dns -n &&
-            bosh upload-stemcell https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent?v=456.22 &&
+            bosh upload-stemcell https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent?v=621.55 &&
             echo "
             THIS WILL TAKE FOREVER, PLEASE WAIT
             " &&
-            bosh -e bosh-lite -d cf deploy cf-deployment/cf-deployment.yml -o cf-deployment/operations/bosh-lite.yml --vars-store deployment-vars.yml -v system_domain=$BOSH_PUBLIC_IP.sslip.io -n &&
+            bosh -e bosh-lite -d cf deploy cf-deployment/cf-deployment.yml -o cf-deployment/operations/bosh-lite.yml --vars-store deployment-vars.yml -v system_domain=cf.{{system_domain}} -n &&
             echo "
             HOPEFULLY THATS CF LITE DEPLOYED, BUT LETS MAKE SURE...
             " &&
@@ -290,7 +290,7 @@ jobs:
             bosh -e bosh-lite -d cf cloud-check &&
             cp deployment-vars.yml cf-vars-out/deployment-vars.yml &&
             CF_ADMIN_PASS=$(bosh int cf-vars-out/deployment-vars.yml --path /cf_admin_password)
-            echo "CF API: api.$BOSH_PUBLIC_IP.sslip.io"
+            echo "CF API: $SYS_DOMAIN"
             echo "CF ADMIN PASS: $CF_ADMIN_PASS"
     ensure: &cf_var_save
       do:

@@ -1,5 +1,5 @@
 cf_labs_git: https://github.com/opsforge/cf-labs.git
-cf_labs_git_branch: master
+cf_labs_git_branch: develop
 
 region: eu-west-1
 s3_bucket: TERRAFORM_S3_BUCKET_NAME
